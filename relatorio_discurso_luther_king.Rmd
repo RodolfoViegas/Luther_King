@@ -1,0 +1,119 @@
+---
+title: "Nuvem de Palavras do Discurso de Martin Luther King Jr."
+author: "Rodolfo Viegas de Albuquerque"
+date: "2022-08-22"
+output: html_document
+---
+# Nuvem de Palavras do Discurso de Martin Luther King Jr.
+
+O presente relatório utiliza a tradução do famoso discurso de Martin Luther King Jr. - "I have a Dream" - expresso em 28 de agosto de 1963 para gerar uma nuvem de palavras que ajuda a analisar o teor do texto. A presente tradução foi obtida pelo site [Brasil de Fato](https://www.brasildefato.com.br/2018/08/28/eu-tenho-um-sonho-ha-55-anos-martin-luther-king-proferia-discurso-historico/)
+
+## Pré-processamento
+
+O procedimento começa com a obtenção e carregamentos das bibliotecas básicas para manipulação e geração de nuvem:
+```{r pacotes}
+#importação
+library(tm)
+library(wordcloud)
+library(readr)
+```
+
+É possível fazer download do texto através e Webscrap, mas para facilitar a coleta simplesmente copia e cola o texto num editor de tua preferência e e o salva com o título "discurso_luther_king.txt".
+
+
+Após isso devemos carrega a massa de caracteres. Vamos criar uma variável chamada discurso e usar a função read_file, do pacote readr, para lê-la.
+```{r}
+discurso <- read_file("/home/rodolfoviegas/R_Scripts/Luther_Nuvem/discurso_luther_king.txt")
+
+```
+
+O texto de King não é grande, possuindo `r nchar(discurso)` caracteres.
+
+É possivel vizualizar os conteúdo da string:
+```{r}
+discurso
+```
+Podemos ver que há caracteres especiais de quebra de texto, como \\n e \\r\\n. Tais símbolos não são relevantes à análise e devem ser descartados. Com a função gsub() podemos substitui-los por um espaço vázio, assim dando mais naturalidade às letras. Vamos atribuir uma nova variável nomeada 'discurso2':
+```{r retirada de caratectes de quebra}
+discurso2 <-gsub("\\r\\n\\r\\n"," ",discurso)
+discurso2
+```
+O discurso possui aparência mais agradável com a retiradas das quebras de texto.
+
+### Transformação
+
+Um passo fundamental para a criação a nuvem é transformar a massa de dados em um objetos 'corpus', este é gerado pelo biblioteca 'tm'.
+
+```{r}
+vs <- VectorSource(discurso2)
+corpus <- Corpus(vs)
+```
+
+Podemos verificar o objeto:
+```{r}
+inspect(corpus)
+```
+Agora precisamos transformar a string para melhor analisá-la. Transformaremos os caracteres em minusculos, removeremos pontuações e palavras ruídos - que não possuem relevância para análise de nuvem. Além da remoção de espaços em branco. E podemos ver o resultado com a função 'inspect'.
+```{r warning=FALSE}
+corpus <- tm_map(corpus, content_transformer(tolower))
+
+corpus <- tm_map(corpus,removePunctuation)
+
+corpus <- tm_map(corpus,stripWhitespace)
+
+corpus <- tm_map(corpus, removeNumbers)
+
+corpus <- tm_map(corpus, removeWords, stopwords("portuguese"))
+```
+
+
+# Gráfico e Nuvem
+
+## Gráfico de Barras
+
+Uma forma de completar a análise é a utilização do gráfico de barras, este monstra a frequência das palavras na string já nos monstrano uma prévia da relevância dessas para o autor do discurso. A linguagem R possui um grande acervo de para visualização.
+
+Comecemos criando uma matriz que carrega os caracteres, ela facilitará na criação no gráfico.
+
+```{r}
+matriz_frequencias <- as.matrix(TermDocumentMatrix(corpus))
+```
+Ao visualizarmo-a, notemos que essa não está com a frequência ordernada:
+
+```{r}
+matriz_frequencias
+```
+Podemos ordená-la com a função sort.
+
+```{r}
+matriz_frequencias <- sort(rowSums(matriz_frequencias), decreasing = T)
+
+```
+
+Após verificarmos que a matriz não estava ordenada, notemos também que há uma enorme quantidade de palavras com frequência igual a 1. Eles têm pouca relevância para a visualização, então devemos selecionar as palavras com frequência mais elevadas, digamos acima de 3.
+
+```{r}
+aux <- subset(matriz_frequencias,matriz_frequencias>3)
+```
+
+Com isso tudo é suficiente para criármos nosso gráfico de barras. Para isso, usemos a função barplot():
+
+```{r}
+barplot(aux, las=2, col=rainbow(10),)
+```
+
+
+Já com o gráfico podemos verificar a relevância de palavras como 'liberadade', que na cultura americana é bastante valorizada. Além do mais, no contexto das leis de Segregação, cidadão de pele negra - outra palavras que obviamente é relevante - não poderiam exercer sua liberdade com tais leis opressivas.
+
+
+## Nuvem
+
+
+Através da função wordcloud podemos gerar um nuvem. Para este trabalhos selecionaremos palavras com frequência mínima igual a 5 e a quantiade de palavras exposta com o máximo de 100.
+```{r}
+wordcloud(words = corpus, min.freq = 5, max.words = 100,
+          random.order = F, rot.per = 0.25,
+          colors = brewer.pal(8,"Dark2"))
+```
+
+A nuvem de palavras reflete o gráfico de barras, monstrando de um modo mais intuitivo as frequências.
