@@ -1,9 +1,21 @@
 ---
-title: "Nuvem de Palavras do Discurso de Martin Luther King Jr."
+title: "Relatório Sobre Mineração de Texto: Discurso the Luther King e Twitter"
 author: "Rodolfo Viegas de Albuquerque"
 date: "2022-08-22"
 output: html_document
+bibliography: /home/rodolfoviegas/R_Scripts/Luther_Nuvem/bibliografia.bib
 ---
+
+![fonte: https://en.wikipedia.org/wiki/Tag_cloud#/media/File:Foundation-l_word_cloud_without_headers_and_quotes.png](/home/rodolfoviegas/R_Scripts/Luther_Nuvem/nuvem.png)
+# Relatório
+
+Este relatório é para a disciplina de Análise de Dados para Computação, ministrada pelo professor Dr. Ermeson Andrade.
+
+Será analisados o discurso do ativista americano Martin Luther King Jr., este discurso foi proferido em 1963, será criado uma gráfico de barras com as frequências de palavras e uma nuvem de palavras.
+
+Além do discurso de Luther King, será criado uma nuvem de palavras por meio e tuítes com a *tag* Brasil e uma gráfico de barras com a análise de sentimento dessa massa e dados.
+
+
 # Nuvem de Palavras do Discurso de Martin Luther King Jr.
 
 O presente relatório utiliza a tradução do famoso discurso de Martin Luther King Jr. - "I have a Dream" - expresso em 28 de agosto de 1963 para gerar uma nuvem de palavras que ajuda a analisar o teor do texto. A presente tradução foi obtida pelo site [Brasil de Fato](https://www.brasildefato.com.br/2018/08/28/eu-tenho-um-sonho-ha-55-anos-martin-luther-king-proferia-discurso-historico/)
@@ -31,12 +43,12 @@ O texto de King não é grande, possuindo `r nchar(discurso)` caracteres.
 
 É possivel vizualizar os conteúdo da string:
 ```{r}
-discurso
+substr(discurso,1,1000)
 ```
 Podemos ver que há caracteres especiais de quebra de texto, como \\n e \\r\\n. Tais símbolos não são relevantes à análise e devem ser descartados. Com a função gsub() podemos substitui-los por um espaço vázio, assim dando mais naturalidade às letras. Vamos atribuir uma nova variável nomeada 'discurso2':
 ```{r retirada de caratectes de quebra}
 discurso2 <-gsub("\\r\\n\\r\\n"," ",discurso)
-discurso2
+substr(discurso2,1,1000)
 ```
 O discurso possui aparência mais agradável com a retiradas das quebras de texto.
 
@@ -78,10 +90,10 @@ Comecemos criando uma matriz que carrega os caracteres, ela facilitará na cria�
 ```{r}
 matriz_frequencias <- as.matrix(TermDocumentMatrix(corpus))
 ```
-Ao visualizarmo-a, notemos que essa não está com a frequência ordernada:
+Ao visualizarmo-la, notemos que essa não está com a frequência ordernada:
 
 ```{r}
-matriz_frequencias
+matriz_frequencias[c(1:20),]
 ```
 Podemos ordená-la com a função sort.
 
@@ -117,3 +129,198 @@ wordcloud(words = corpus, min.freq = 5, max.words = 100,
 ```
 
 A nuvem de palavras reflete o gráfico de barras, monstrando de um modo mais intuitivo as frequências.
+
+
+# Mineração de Tuítes
+
+
+Com o passar do tempo, as redes sociais tornaram-se parte da rotina das pessoas. Lá não é só o local e conhecer novos amigos, mas um ponto de expressar opiniões e debater. Logo, essas redes são fontes importantes de dados para entender opiniões e sentimentos da população em relação as mais variádas coisas.
+
+O Twitter oferece uma API para fazermos tratamento dos textos em 144 caracteres de lá. 
+
+## Nuvem de Tuítes
+
+Primeiramente cria uma conta no Twitter e loga no Developer Twitter, lá as chaves para autenticação dos recursos da rede.
+
+Carrega as principais bibliotecas:
+
+```{r}
+library(rtweet)
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+```
+
+Tendo as chaves de autenticação, atribu-as em variáveis e as aplica na função "token" e roda a função "auth_setup_default". Como isso, a autenticação será validada.
+
+
+```{r}
+consumer_key <- "ARWEMkx1S5O121fR2Rq55otBB"
+consumer_secret <- "IHOrVvvUWLtHvB22dcKaVMxKbpfDcZafyvWe0cdPpQQrgBJggm"
+access_token <- "1176572720001236992-qpxQcXUbwl0CcQSanWAdwdRsDYwvnv"
+access_secret <- "PKtzdxaH7hT5J7VCGhLZASRFEi63fJghNNA329iJJqGCN"
+
+token <- create_token(app= "TuiteLula",
+                     consumer_key,
+                     consumer_secret,
+                     access_token,
+                     access_secret)
+auth_setup_default()
+```
+Agora é hora de baixar os dados:
+
+```{r}
+rstat_tweets<-search_tweets("#Brasil", n=500,lang = "pt")
+
+tweets<- paste(rstat_tweets$full_text, collapse = " ")
+```
+
+A biblioteca "rtweet", através da função "search_tweets", baixá-los e os armazena na estrutura data frame - mais fácil de analisar. Mas precisamos colapsá-los para uma string, afim de analisar os dados que queremos.
+
+Semelhante a mineração de textos, precisamos limpar os dados para gerarmos nossa nuvem.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+tweets_S <- VectorSource(tweets)
+corpus <- Corpus(tweets_S)
+
+
+
+corpus <- tm_map(corpus, content_transformer(tolower))
+# Remoção de putuação
+corpus <- tm_map(corpus,removePunctuation)
+# Remoção de espaços em branco a mais
+corpus <- tm_map(corpus,stripWhitespace)
+# Remoção de palavras ruído (stopwords)
+corpus <- tm_map(corpus, removeWords, stopwords("portuguese"))
+
+
+
+removeURL <- function(x){gsub("http[^[:space:]]*","",x)}
+corpus<-tm_map(corpus,removeURL)
+
+# remove qualquer coisa que nao seja letras em portugues e espaço
+removeNumPunct<-function(x){gsub("[^[:alpha:][:space:]]*","",x)}
+corpus<-tm_map(corpus,removeNumPunct)
+```
+
+É possível ainda verificar a frequencia as palavras para ajudar a compreenção da nuvem.
+
+```{r}
+dtm<-TermDocumentMatrix(corpus)
+dtm<-as.matrix(dtm)
+
+# Frequencia ordenada
+fre<-sort(rowSums(dtm),decreasing = T)
+```
+
+O gráfico de barras expões essas:
+
+```{r}
+aux <- subset(fre,fre>15)
+
+
+# plotagem do gráfico de barras das frequência
+
+barplot(aux, las=2, col=rainbow(10))
+```
+## Nuvem
+
+A mesma função usada para nuvem em textos é usada para os tuítes:
+
+```{r}
+wordcloud(words = corpus, min.freq = 15, max.words = Inf,
+          random.order = F, rot.per = 0.15,
+          colors = brewer.pal(8,"Dark2"),scale = c(8,.2))
+```
+
+
+Muito do que está conectado à tag Brasil está relacionado a política, faz sentido por estamos em ano eleitoral e hoje, 26/08/2022, ocorerram três entrevistas com os presidenciáveis principais: Lula, Bolsonaro e Ciro Gomes. Daí palavras como: "bolsonaro", "lula","eleições", política", "povo" etc.
+
+
+## Análise de sentimentos
+
+![fonte: https://commons.wikimedia.org/wiki/File:Emoticon_angry-red.png#/media/File:Emoticon_angry-red.png](/home/rodolfoviegas/R_Scripts/Luther_Nuvem/emot.png)
+
+
+Além da nuvem de palavras, é possível desenvolvermos uma análise sentimentos em relação aos tuítes extraidos. 
+
+Comecemos pela biblioteca, se não a tens, usa a função "install.packages" para baixá-la:
+```{r}
+library(syuzhet)
+```
+
+
+Agora a função "get_nrc_sentiments" cria um data frame classificado os tuítes 
+
+```{r}
+s<-get_nrc_sentiment(tweets)
+```
+Olhemos o dataframe
+
+```{r}
+head(s)
+```
+São várias coluna com sentimentos para classificarem os tuítes.
+
+
+
+```{r}
+barplot(colSums(s),las=2,col=rainbow(10),ylab= "Quantidade",main= "Pontuação de Sentimentos para os Twittes sobre Brasil")
+```
+O gráfico de barras expôe que os usuários do Twitter ainda têm sentimentos mais positivos que negativos e relação ao Brasil, ao mesmo tempo possuem mais tristeza (*sadness*) e medo (*fear*) que diversão (*joy*). Tais contradições podem ser por causa de muitos fatores: como a crise econômica, polarização e isso tudo com, uma possível, esperança.
+
+
+# OFF (Caracateristicas no RMarkdown importantes)
+
+## Uso do Latex
+
+Uma das ferramentas mais usadas para criação de artigos científicos é o Latex, nele podemos criar textos com bom acabamento e desenvolver equações matemáticas complexas que teríamos dificuldade em editores mais populares.
+
+É possível usá-lo dentro de RMarkdown; abaixo exemplos de equações escritas em LaTeX:
+
+$$\int\limits_x^{\infty}\int\limits_b^{\infty} x^2+y^2 \mathrm{d}x \mathrm{d}y$$
+
+$$\binom{6}{4} = \frac{6!}{4! \cdot 2!}$$
+$$A \bigcup B = \left\{ x \in \mathbb{R} \middle| x \in A \bigvee x \in B \right\}$$
+
+$$\sideset{_a^b}{'}\sum_{\substack{ i=1 \\ i \not= j}}^{n}i$$
+$$p(x) = \frac{\partial (x^5 + 22xy^3 -3xy)}{\partial x
+10 \partial y} + 3x^6 + 14x^5y + 590x^4y^2 + 19x^3y^3 -
+11 \\\ln | 3x - 32xy | + \int_0^\infty (\sqrt{xy + x^2} -
+12 x^5 + 2)\,dx\\ - 12x^2y^4 - 12xy^5 + 2y^6 - a^3b^3 -
+13 \ln | 90x^4y^2 + 19x^3y^3 |$$
+
+
+
+## Uso de Referências em RMarkdown
+
+Referência com RMarkdown pode ser feitas pelo BibTex. Para adicionar, é preciso criar no cabeçalho do arquivo .Rmd o campo "bibliography", nele coloca o caminho até o arquivo .bib com todas as refências usadas no artigo. Abaixo alguns exemplos:
+
+
+### **Referências**
+
+@ge2017sentiment
+@zimbra2018state
+@solovyev2019sentiment
+@yu2018improving
+@kumar2015sentiment
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

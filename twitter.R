@@ -1,15 +1,12 @@
 # Analise de twittes
 setwd("/home/rodolfoviegas/R_Scripts/Luther_Nuvem/")
+
 # bibliotecas
-install.packages("twitteR")
-install.packages ("rtweet")
+
 library(rtweet)
-
-
 library(tm)
 library(wordcloud)
 library(RColorBrewer)
-library(twitteR)
 
 
 # Chaves de autenticação
@@ -25,7 +22,7 @@ token <- create_token(app= "TuiteLula",
                      access_token,
                      access_secret)
 auth_setup_default()
-rstat_tweets<-search_tweets("#stf", n=500,lang = "pt")
+rstat_tweets<-search_tweets("#Brasil", n=500,lang = "pt")
 
 tweets<- paste(rstat_tweets$full_text, collapse = " ")
 tweets
@@ -64,7 +61,24 @@ fre<-sort(rowSums(dtm),decreasing = T)
 fre
 
 
-wordcloud(words = corpus, min.freq = 3, max.words = Inf,
+wordcloud(words = corpus, min.freq = 5, max.words = Inf,
           random.order = F, rot.per = 0.15,
           colors = brewer.pal(8,"Dark2"),scale = c(8,.2))
 
+
+
+#############################
+
+# Análise de Sentimentos
+
+############################
+
+
+
+install.packages("syuzhet")
+library(syuzhet)
+
+s<-get_nrc_sentiment(tweets)
+
+
+barplot(colSums(s),las=2,col=rainbow(10),ylab= "Quantidade",main= "Pontuação de Sentimentos para os Twittes sobre Brasil")
